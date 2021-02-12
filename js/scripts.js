@@ -1,36 +1,37 @@
 //what parameters can I use in the promises?
 //how to display image on page?
 
+// scope
+// function test(num1) {
+//   var sum = num1 + 1; // sum is visible only inside the test function, it has local scope
+//   return sum;
+// }
+
 let cocktailRepository = (function () {
-  let cocktailList = [];
+  let cocktailCategories = [];
+  let name = "asdsaad"
   let apiUrl = 'https://www.thecocktaildb.com/api/json/v1/1/list.php?c=list';
 
-  function add(drink) {
+  function add(category) {
     //if (typeof drink === 'object' && 'strDrink' in drink) { ---Why doesn't this work?
-    if (typeof drink === 'object') {
-      cocktailList.push(drink);
-    } else {
-      console.log('Drink object is incorrect');
-    }
+    cocktailCategories.push(category);
   }
 
   function getAll() {
-    return cocktailList;
+    return cocktailCategories;
   }
 
   function loadList() {
     showLoadingIcon();
-    return fetch(apiUrl)
+    return fetch(apiUrl) // fetch returns a Promise
       .then(function (response) {
         return response.json();
       })
-      .then(function (json) {
+      .then(function(json) {
         hideLoadingIcon();
-        json.drinks.forEach(function (item) {
-          let drinks = {
-            category: item.strCategory,
-          };
-          add(drinks);
+        console.log(json, '!!drinks') // check the Api response (json)
+        json.drinks.forEach(function(item) { // this anonymous function is the callback of forEach function, item is the parameter, item is the element of the json.drinks array which is an object
+          add(item.strCategory);
         });
       })
       .catch(function (error) {
@@ -39,44 +40,35 @@ let cocktailRepository = (function () {
       });
   }
 
-  function addListItem(drink) {
-    let element = document.querySelector('.cocktail-list');
+  function addListItem(category) {
+    let element = document.querySelector('.cocktail-categories');
     let listItem = document.createElement('li');
     let button = document.createElement('button');
-    button.innerText = drink.category;
+    button.innerText = category;
     button.classList.add('drink-info-button');
+
     button.addEventListener('click', function () {
-      showDetails(drink);
+      fetchDrinksByCategory(category).then(drinks => {
+        document.querySelector('.drinks').innerHTML = ''; // clear all the drinks, otherwise it would keep appending the drinks of the clicked category at the end
+        drinks.forEach(drink => {
+          // you can inspect api response under Network tab > XHR > Response
+          let drinkItem = document.createElement('div');
+          drinkItem.innerText = drink.strDrink;
+          document.querySelector('.drinks').appendChild(drinkItem);
+        })
+      })
     }); //Event Listener
     listItem.appendChild(button); //append button to list item
     element.appendChild(listItem); //append list item to parent
-    showDetails(drink); //call new function inside addListItem() after button is appended to DOM
+    // showDetails(category); //call new function inside addListItem() after button is appended to DOM
   }
 
-  function loadDetails(item) {
-    showLoadingIcon();
-    // function loadDetails(drink) { -- why doesn't it work when i change item to drink
-    let selectedCategory = item.category;
-    selectedCategory = selectedCategory.replace(/\s+/g, '_');
-    let categoryUrl =
-      'https://www.thecocktaildb.com/api/json/v1/1/filter.php?c=' +
-      selectedCategory;
-    return fetch(categoryUrl)
-      .then(function (response) {
-        return response.json();
-      })
-      .then(function (json) {
-        hideLoadingIcon();
-        json.drinks.forEach(function (details) {
-          item.name = details.strDrink;
-          item.imageUrl = details.strDrinkThumb + '/preview';
-        });
-      })
-      .catch(function (error) {
-        hideLoadingIcon();
-        console.error(error);
-      });
+  function fetchDrinksByCategory(category) {
+    return fetch(`https://www.thecocktaildb.com/api/json/v1/1/filter.php?c=${category}`)
+      .then(response => response.json())
+      .then(json => json.drinks)
   }
+
   //! Need help assigning names to multiple drinks?
   function loadMoreDetails(item) {
     showLoadingIcon();
@@ -104,13 +96,6 @@ let cocktailRepository = (function () {
       });
   }
 
-  function showDetails(drink) {
-    //function that’s dedicated to adding the event listener to the newly created button
-    loadDetails(drink).then(function () {
-      loadMoreDetails(drink);
-    });
-    console.log(drink);
-  }
   var spinner = document.querySelector('.loader');
   function showLoadingIcon() {
     console.log('LOADING');
@@ -125,15 +110,9 @@ let cocktailRepository = (function () {
   }
 
   return {
-    add: add,
     getAll: getAll,
     loadList: loadList,
     addListItem: addListItem,
-    loadDetails: loadDetails,
-    loadMoreDetails: loadMoreDetails,
-    showDetails: showDetails,
-    showLoadingIcon: showLoadingIcon,
-    hideLoadingIcon: hideLoadingIcon,
   };
 })();
 
@@ -157,7 +136,7 @@ let cocktailRepository = (function () {
 
 cocktailRepository.loadList().then(function () {
   // Now the data is loaded!
-  cocktailRepository.getAll().forEach(function (drink) {
-    cocktailRepository.addListItem(drink);
+  cocktailRepository.getAll().forEach(function (category) {
+    cocktailRepository.addListItem(category);
   });
 });
